@@ -1,0 +1,286 @@
+package dp;
+import java.sql.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+public class CricketDB {
+	public static void main(String[] args) {
+		try {
+            Class.forName("oracle.jdbc.driver.OracleDriver");
+            Connection con = DriverManager.getConnection("connection link", "system", "password");
+
+            BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+            while (true) {
+                System.out.println("Menu:");
+                System.out.println("1. Create Table");
+                System.out.println("2. Insert Record");
+                System.out.println("3. Update Record");
+                System.out.println("4. Delete Record");
+                System.out.println("5. Display Records");
+                System.out.println("6. Exit");
+                System.out.println("Enter your choice:");
+
+                int choice = Integer.parseInt(br.readLine());
+
+                switch (choice) {
+                    case 1:
+                        createTable(con);
+                        break;
+                    case 2:
+                        insertRecord(con, br);
+                        break;
+                    case 3:
+                        updateRecord(con, br);
+                        break;
+                    case 4:
+                        deleteRecord(con, br);
+                        break;
+                    case 5:
+                        selectRecords(con);
+                        break;
+                    case 6:
+                        con.close();
+                        System.out.println("Exiting...");
+                        System.exit(0);
+                        break;
+                    default:
+                        System.out.println("Invalid choice. Please try again.");
+                        break;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+	
+	//creating team table
+	 private static void createTable(Connection con) throws SQLException {
+		 try {
+             Statement smt = con.createStatement();
+             smt.executeUpdate("CREATE TABLE team (tid INT PRIMARY KEY, tname VARCHAR(20), coach VARCHAR(20), captain_pid INT, city VARCHAR(20))");
+             System.out.println("Table created successfully.");
+             } 
+		 catch (SQLException e)
+		    {
+             System.err.println("Failed to create table: " + e.getMessage());
+             e.printStackTrace();
+            }
+	    }
+	 
+	//inserting values into the team table
+	 private static void insertRecord(Connection con, BufferedReader br) throws SQLException, IOException {
+	     PreparedStatement psmt = con.prepareStatement("INSERT INTO team VALUES (?, ?, ?, ?, ?)");
+
+	     while (true) {
+	         try {
+	             System.out.println("Team ID:");
+	             int tid = Integer.parseInt(br.readLine());
+	             if (tid <= 0) {
+	                 System.out.println("Team ID must be a positive integer.");
+	                 continue;
+	             }
+
+	             System.out.println("Team Name:");
+	             String tname = br.readLine();
+	             if (!tname.matches("[a-zA-Z ]+")) {
+	                 System.out.println("Team Name must be a valid string containing only letters and spaces.");
+	                 continue;
+	             }
+
+	             System.out.println("Coach Name:");
+	             String coach = br.readLine();
+	             if (!coach.matches("[a-zA-Z ]+")) {
+	                 System.out.println("Coach Name must be a valid string containing only letters and spaces.");
+	                 continue;
+	             }
+
+	             System.out.println("Captain Player ID:");
+	             int captain_pid = Integer.parseInt(br.readLine());
+	             if (captain_pid <= 0) {
+	                 System.out.println("Captain Player ID must be a positive integer.");
+	                 continue;
+	             }
+
+	             System.out.println("City:");
+	             String city = br.readLine();
+	             if (!city.matches("[a-zA-Z ]+")) {
+	                 System.out.println("City must be a valid string containing only letters and spaces.");
+	                 continue;
+	             }
+
+	             psmt.setInt(1, tid);
+	             psmt.setString(2, tname);
+	             psmt.setString(3, coach);
+	             psmt.setInt(4, captain_pid);
+	             psmt.setString(5, city);
+
+	             int count = psmt.executeUpdate();
+	             if (count > 0)
+	                 System.out.println(count + " Record inserted");
+	             else
+	                 System.out.println("No record inserted");
+
+	         } catch (NumberFormatException e) {
+	             System.out.println("Invalid input. Please enter the correct data type.");
+	             continue;
+	         } catch (SQLException e) {
+	             System.err.println("Database error: " + e.getMessage());
+	             e.printStackTrace();
+	             continue;
+	         }
+
+	         System.out.println("Do you want to insert more records....[yes/no]");
+	         String ch = br.readLine();
+	         if (ch.equalsIgnoreCase("no"))
+	             break;
+	     }
+	 }
+
+	 // selecting the complete team table 
+	 private static void selectRecords(Connection con) {
+		    Statement smt = null;
+		    ResultSet rs = null;
+		    try {
+		        smt = con.createStatement();
+		        rs = smt.executeQuery("SELECT * FROM team");
+		        int count = 0;
+
+		        while (rs.next()) {
+		            int tid = rs.getInt("tid");
+		            String tname = rs.getString("tname");
+		            String coach = rs.getString("coach");
+		            int captain_pid = rs.getInt("captain_pid");
+		            String city = rs.getString("city");
+		            ++count;
+		            System.out.println("Record " + count);
+		            System.out.println("Team ID: " + tid);
+		            System.out.println("Team Name: " + tname);
+		            System.out.println("Coach Name: " + coach);
+		            System.out.println("Captain Player ID: " + captain_pid);
+		            System.out.println("City: " + city);
+		            System.out.println("\n");
+		        }
+
+		        if (count == 0) {
+		            System.out.println("The table is empty.");
+		        }
+		    } catch (SQLException e) {
+		        System.err.println("Database error: " + e.getMessage());
+		        e.printStackTrace();
+		    } finally {
+		        try {
+		            if (rs != null) rs.close();
+		            if (smt != null) smt.close();
+		        } catch (SQLException e) {
+		            System.err.println("Error closing resources: " + e.getMessage());
+		            e.printStackTrace();
+		        }
+		    }
+		}
+	 
+	 //deleting the record based on team_id from team table
+	 private static void deleteRecord(Connection con, BufferedReader br) throws SQLException, IOException {
+		 Statement stmt = con.createStatement();
+		    while (true) {
+		        try {
+		            System.out.println("Enter team_id number to delete:");
+		            int tid = Integer.parseInt(br.readLine());
+		            if (tid <= 0) {
+		                System.out.println("Team ID must be a positive integer.");
+		                continue;
+		            }
+
+		            int count = stmt.executeUpdate("DELETE FROM team WHERE tid=" + tid);
+		            if (count == 1)
+		                System.out.println(count + " Record deleted");
+		            else
+		                System.out.println("No record deleted");
+
+		        } 
+		        catch (NumberFormatException e) {
+		            System.out.println("Invalid input. Team ID must be a positive integer.");
+		        	} 
+		        catch (SQLException e) {
+		            System.err.println("Database error: " + e.getMessage());
+		            e.printStackTrace();
+		        	}
+		        catch (IOException e) {
+		            System.err.println("Input/Output error: " + e.getMessage());
+		            e.printStackTrace();
+		        	}
+
+		        System.out.println("Do you want to delete more records....[yes/no]");
+		        String ch = br.readLine();
+		        if (ch.equalsIgnoreCase("no"))
+		            break;
+		    }
+	    }
+	 
+	 //updating the team table 
+	 private static void updateRecord(Connection con, BufferedReader br) throws SQLException, IOException {
+		    System.out.println("Enter Team ID to update:");
+		    int tid = Integer.parseInt(br.readLine());
+
+		    // Display update options
+		    System.out.println("Select the field to update:");
+		    System.out.println("1. Team Name");
+		    System.out.println("2. Coach Name");
+		    System.out.println("3. Captain Player ID");
+		    System.out.println("4. City");
+		    int choice = Integer.parseInt(br.readLine());
+
+		    String sql = "";
+		    switch (choice) {
+		        case 1:
+		            System.out.println("Enter new Team Name:");
+		            String tname = br.readLine();
+		            sql = "UPDATE team SET tname = ? WHERE tid = ?";
+		            try (PreparedStatement psmt = con.prepareStatement(sql)) {
+		                psmt.setString(1, tname);
+		                psmt.setInt(2, tid);
+		                int count = psmt.executeUpdate();
+		                System.out.println(count > 0 ? count + " Record updated" : "No record updated");
+		            }
+		            break;
+		        case 2:
+		            System.out.println("Enter new Coach Name:");
+		            String coach = br.readLine();
+		            sql = "UPDATE team SET coach = ? WHERE tid = ?";
+		            try (PreparedStatement psmt = con.prepareStatement(sql)) {
+		                psmt.setString(1, coach);
+		                psmt.setInt(2, tid);
+		                int count = psmt.executeUpdate();
+		                System.out.println(count > 0 ? count + " Record updated" : "No record updated");
+		            }
+		            break;
+		        case 3:
+		            System.out.println("Enter new Captain Player ID:");
+		            int captain_pid = Integer.parseInt(br.readLine());
+		            sql = "UPDATE team SET captain_pid = ? WHERE tid = ?";
+		            try (PreparedStatement psmt = con.prepareStatement(sql)) {
+		                psmt.setInt(1, captain_pid);
+		                psmt.setInt(2, tid);
+		                int count = psmt.executeUpdate();
+		                System.out.println(count > 0 ? count + " Record updated" : "No record updated");
+		            }
+		            break;
+		        case 4:
+		            System.out.println("Enter new City:");
+		            String city = br.readLine();
+		            sql = "UPDATE team SET city = ? WHERE tid = ?";
+		            try (PreparedStatement psmt = con.prepareStatement(sql)) {
+		                psmt.setString(1, city);
+		                psmt.setInt(2, tid);
+		                int count = psmt.executeUpdate();
+		                System.out.println(count > 0 ? count + " Record updated" : "No record updated");
+		            }
+		            break;
+		        default:
+		            System.out.println("Invalid choice. No record updated.");
+		            break;
+		    }
+		}
+
+
+
+}
